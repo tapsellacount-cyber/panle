@@ -1,5 +1,17 @@
 ARG PYTHON_VERSION=3.14
 
+# Build the dashboard here so the runtime image never needs bun. The output
+# lands in /dashboard/build, which is where dashboard/__init__.py expects it.
+FROM oven/bun:1 AS dashboard-builder
+ARG VITE_BASE_API=/
+WORKDIR /dashboard
+COPY dashboard/package.json dashboard/bun.lock ./
+RUN bun install --frozen-lockfile
+COPY dashboard/ ./
+RUN VITE_BASE_API="$VITE_BASE_API" bun run build --outDir build --assetsDir statics \
+    && cp build/index.html build/404.html
+
+
 FROM ghcr.io/astral-sh/uv:python$PYTHON_VERSION-bookworm-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
@@ -16,6 +28,10 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,id=s/6a913be4-c045-453d-8888-c43b24c31dfd-/root/.cache/uv,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 ADD . /build
+# Only the Python integration module is needed at runtime; the compiled assets
+# are copied in from the dashboard-builder stage.
+RUN find /build/dashboard -mindepth 1 -maxdepth 1 ! -name __init__.py -exec rm -rf {} +
+COPY --from=dashboard-builder /dashboard/build /build/dashboard/build
 RUN --mount=type=cache,id=s/6a913be4-c045-453d-8888-c43b24c31dfd-/root/.cache/uv,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
