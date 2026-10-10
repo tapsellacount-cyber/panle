@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# Railway provides PORT env variable - map it to UVICORN_PORT
+if [ -n "${PORT}" ]; then
+    export UVICORN_PORT="${PORT}"
+fi
+
 ROLE="${ROLE:-all-in-one}"
 
 if [ "${ROLE}" = "node" ]; then
