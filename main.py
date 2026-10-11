@@ -120,7 +120,11 @@ if __name__ == "__main__":
         if server_settings.uds:
             bind_args["uds"] = server_settings.uds
         else:
-            ip = check_and_modify_ip(server_settings.host)
+            # Allow binding to 0.0.0.0 when running behind a trusted reverse proxy (e.g. Railway)
+            if server_settings.proxy_headers:
+                ip = server_settings.host
+            else:
+                ip = check_and_modify_ip(server_settings.host)
 
             logger.warning(f"""
 {click.style("IMPORTANT!", blink=True, bold=True, fg="yellow")}
