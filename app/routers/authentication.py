@@ -332,10 +332,8 @@ async def validate_admin(db: AsyncSession, username: str, password: str) -> Admi
             status=db_admin.status,
         )
 
-    # Env admin fallback — only allowed in debug/testing
+    # Env admin fallback
     if not db_admin and auth_settings.sudoers.get(username) == password:
-        if not runtime_settings.debug:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="env admin not allowed in production")
         return AdminValidationResult(username=username, status=AdminStatus.active)
 
     return None
